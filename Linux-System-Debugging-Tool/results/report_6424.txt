@@ -1,0 +1,18 @@
+LINUX SYSTEM DEBUGGING TOOL REPORT
+===================================
+Program: ./tests/file_error
+PID: 6425
+Time: Sun Sep 27 06:20:34 2026
+
+PROCESS RESULT
+--------------
+Termination: Normal
+Exit status: 1
+
+SYSTEM CALL ANALYSIS
+--------------------
+System call: openat()
+Return value: -1
+errno: 2
+Error name: ENOENT
+Description: No such file or directory

@@ -1,0 +1,14 @@
+LINUX SYSTEM DEBUGGING TOOL REPORT
+===================================
+Program: ./tests/abnormal_exit
+PID: 6470
+Time: Sun Sep 27 06:20:43 2026
+
+PROCESS RESULT
+--------------
+Termination: Abnormal
+Signal: 15 (SIGTERM (Termination))
+
+SYSTEM CALL ANALYSIS
+--------------------
+No failed system call was identified in the trace.

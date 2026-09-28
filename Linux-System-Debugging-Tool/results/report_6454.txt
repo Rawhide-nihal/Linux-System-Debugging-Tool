@@ -1,0 +1,18 @@
+LINUX SYSTEM DEBUGGING TOOL REPORT
+===================================
+Program: ./tests/permission_error
+PID: 6455
+Time: Sun Sep 27 06:20:40 2026
+
+PROCESS RESULT
+--------------
+Termination: Normal
+Exit status: 1
+
+SYSTEM CALL ANALYSIS
+--------------------
+System call: openat()
+Return value: -1
+errno: 13
+Error name: EACCES
+Description: Permission denied

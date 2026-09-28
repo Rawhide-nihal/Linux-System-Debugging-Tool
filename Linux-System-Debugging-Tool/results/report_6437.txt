@@ -1,0 +1,18 @@
+LINUX SYSTEM DEBUGGING TOOL REPORT
+===================================
+Program: ./tests/invalid_fd
+PID: 6438
+Time: Sun Sep 27 06:20:37 2026
+
+PROCESS RESULT
+--------------
+Termination: Normal
+Exit status: 1
+
+SYSTEM CALL ANALYSIS
+--------------------
+System call: read()
+Return value: -1
+errno: 9
+Error name: EBADF
+Description: Bad file descriptor

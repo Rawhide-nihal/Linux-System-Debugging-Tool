@@ -1,0 +1,14 @@
+LINUX SYSTEM DEBUGGING TOOL REPORT
+===================================
+Program: ./tests/segmentation_fault
+PID: 6379
+Time: Sun Sep 27 06:19:46 2026
+
+PROCESS RESULT
+--------------
+Termination: Abnormal
+Signal: 11 (SIGSEGV (Segmentation fault))
+
+SYSTEM CALL ANALYSIS
+--------------------
+No failed system call was identified in the trace.

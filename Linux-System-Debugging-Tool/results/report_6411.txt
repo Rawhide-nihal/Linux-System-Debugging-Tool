@@ -1,0 +1,14 @@
+LINUX SYSTEM DEBUGGING TOOL REPORT
+===================================
+Program: ./tests/normal_test
+PID: 6412
+Time: Sun Sep 27 06:20:29 2026
+
+PROCESS RESULT
+--------------
+Termination: Normal
+Exit status: 0
+
+SYSTEM CALL ANALYSIS
+--------------------
+No failed system call was identified in the trace.
