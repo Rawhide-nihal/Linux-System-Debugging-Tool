@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LDST Workspace — Linux System Debugging Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <!-- Chart.js CDN (with built-in canvas fallback in app.js if offline) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="workspace-body">
+
+  <div class="app-shell" id="appShell">
+    <!-- Persistent Left Sidebar -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <a href="/" class="brand-logo" title="Return to Landing Page">
+          <span class="brand-mark">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </span>
+          <div class="brand-stack">
+            <span class="brand-text">LDST</span>
+            <span class="brand-sub">Linux Debugger v2.0</span>
+          </div>
+        </a>
+        <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Workspace Navigation">
+        <div class="nav-group">
+          <button class="side-link active" data-view="dashboard">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Dashboard</span>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">PROGRAMS</div>
+          <button class="side-link" data-view="programs">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span>Test Programs</span>
+          </button>
+          <button class="side-link" data-view="create">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            <span>Create Program</span>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">DEBUG</div>
+          <button class="side-link" data-view="debugger">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>Debugger</span>
+          </button>
+          <button class="side-link" data-view="autodebugger">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+            <span>AutoDebugger</span>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">ANALYSIS</div>
+          <button class="side-link" data-view="results" id="sideLinkResults">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Latest Result</span>
+          </button>
+          <button class="side-link" data-view="reports">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>Reports</span>
+          </button>
+        </div>
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="engine-status-box" id="sidebarToolchainBox">
+          <div class="engine-status-row">
+            <span class="status-dot dot-emerald" id="coreStatusDot"></span>
+            <span class="engine-status-title" id="coreStatusText">LDST Core Ready</span>
+          </div>
+          <div class="engine-pills" id="toolchainPills">
+            <span class="mini-pill" id="pillGcc" title="GCC Compiler">GCC</span>
+            <span class="mini-pill" id="pillStrace" title="strace System-Call Tracer">strace</span>
+            <span class="mini-pill" id="pillGdb" title="GNU Debugger">GDB</span>
+            <span class="mini-pill" id="pillProc" title="Linux /proc Filesystem">/proc</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Column -->
+    <div class="app-main">
+      <!-- Top Bar -->
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open Navigation">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="breadcrumb-wrap">
+            <span class="breadcrumb-root">LDST Workspace</span>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current" id="topbarCurrentSection">Dashboard</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="env-indicator" id="topbarOsBadge" title="Local Execution Environment">
+            <span class="status-dot dot-emerald"></span>
+            <span id="topbarOsText">Linux • 127.0.0.1:5000</span>
+          </div>
+          <button class="btn btn-sm btn-secondary" onclick="switchView('create')">
+            <span>+ New C Program</span>
+          </button>
+          <button class="btn btn-sm btn-primary" onclick="switchView('debugger')">
+            <span>Run Debugger</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Global Toast / Alert Banner -->
+      <div id="globalToast" class="global-toast hidden" role="status" aria-live="polite"></div>
+
+      <!-- View Container -->
+      <main class="workspace-content">
+
+        <!-- =======================================================
+             VIEW 1: DASHBOARD (Section 9)
+             ======================================================= -->
+        <section id="view-dashboard" class="view-pane active">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Dashboard</h1>
+              <p class="view-subtitle">Run, debug and analyze Linux C programs with real system-level evidence.</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn btn-secondary" onclick="refreshDashboard()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards -->
+          <div class="stats-grid">
+            <div class="stat-card" onclick="switchView('programs')">
+              <div class="stat-top">
+                <span class="stat-label">Built-in Tests</span>
+                <span class="stat-icon icon-blue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                  </svg>
+                </span>
+              </div>
+              <div class="stat-value" id="statBuiltinCount">7</div>
+              <div class="stat-meta">Official controlled OS test cases</div>
+            </div>
+
+            <div class="stat-card" onclick="switchView('programs', {tab: 'custom'})">
+              <div class="stat-top">
+                <span class="stat-label">Custom Programs</span>
+                <span class="stat-icon icon-cyan">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                </span>
+              </div>
+              <div class="stat-value" id="statCustomCount">0</div>
+              <div class="stat-meta">User-created C programs in <code>tests/</code></div>
+            </div>
+
+            <div class="stat-card" onclick="switchView('reports')">
+              <div class="stat-top">
+                <span class="stat-label">Total Analyses</span>
+                <span class="stat-icon icon-violet">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </span>
+              </div>
+              <div class="stat-value" id="statAnalysesCount">0</div>
+              <div class="stat-meta">Persisted diagnostic sessions</div>
+            </div>
+
+            <div class="stat-card" onclick="switchView('debugger')">
+              <div class="stat-top">
+                <span class="stat-label">Active Processes</span>
+                <span class="stat-icon icon-emerald">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                </span>
+              </div>
+              <div class="stat-value" id="statActiveCount">0</div>
+              <div class="stat-meta">Currently running debug sessions</div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="panel-card">
+            <div class="panel-header">
+              <h2 class="panel-title">Quick Actions</h2>
+              <span class="panel-hint">Jump directly to common Linux debugging workflows</span>
+            </div>
+            <div class="quick-actions-grid">
+              <button class="quick-action-btn" onclick="switchView('programs')">
+                <span class="qa-icon icon-blue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                </span>
+                <div class="qa-text">
+                  <strong>Run a Test Program</strong>
+                  <span>Execute or inspect built-in C test cases</span>
+                </div>
+              </button>
+              <button class="quick-action-btn" onclick="switchView('create')">
+                <span class="qa-icon icon-cyan">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </span>
+                <div class="qa-text">
+                  <strong>Create New Program</strong>
+                  <span>Write and compile custom C code with GCC</span>
+                </div>
+              </button>
+              <button class="quick-action-btn" onclick="switchView('debugger')">
+                <span class="qa-icon icon-violet">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                </span>
+                <div class="qa-text">
+                  <strong>Run Debugger</strong>
+                  <span>Trace syscalls with strace &amp; monitor /proc</span>
+                </div>
+              </button>
+              <button class="quick-action-btn" onclick="switchView('autodebugger')">
+                <span class="qa-icon icon-emerald">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                  </svg>
+                </span>
+                <div class="qa-text">
+                  <strong>Run AutoDebugger</strong>
+                  <span>Automated 6-stage investigation + GDB</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Recent Analyses Table -->
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Recent Analyses</h2>
+                <span class="panel-hint">Recorded diagnostic sessions from actual executions</span>
+              </div>
+              <button class="btn btn-sm btn-secondary" onclick="switchView('reports')">View All Reports</button>
+            </div>
+
+            <div id="dashboardRecentContainer">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- =======================================================
+             VIEW 2: TEST PROGRAMS PAGE (Section 10)
+             ======================================================= -->
+        <section id="view-programs" class="view-pane">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Test Programs</h1>
+              <p class="view-subtitle">Official Linux systems test suite and dynamically discovered custom C programs.</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn btn-primary" onclick="openEditorForNew()">+ Create New C Program</button>
+            </div>
+          </div>
+
+          <div class="tabs-bar">
+            <button class="tab-btn active" id="tabBtnBuiltin" onclick="switchProgramsTab('builtin')">
+              BUILT-IN TESTS <span class="tab-count" id="tabCountBuiltin">7</span>
+            </button>
+            <button class="tab-btn" id="tabBtnCustom" onclick="switchProgramsTab('custom')">
+              CUSTOM PROGRAMS <span class="tab-count" id="tabCountCustom">0</span>
+            </button>
+          </div>
+
+          <div id="programsBuiltinPane" class="programs-grid">
+            <!-- Populated dynamically from /api/programs -->
+          </div>
+
+          <div id="programsCustomPane" class="hidden">
+            <div id="programsCustomGrid" class="programs-grid"></div>
+          </div>
+        </section>
+
+        <!-- =======================================================
+             VIEW 3: CREATE / EDIT C PROGRAM (Section 11 & 12)
+             ======================================================= -->
+        <section id="view-create" class="view-pane">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" id="editorPageTitle">Create New C Program</h1>
+              <p class="view-subtitle">Write standard C11 code, compile with real GCC (<code>-Wall -Wextra -std=c11 -g</code>), and debug immediately.</p>
+            </div>
+            <div class="view-header-actions">
+              <select id="editorTemplateSelect" class="form-select form-select-sm" onchange="loadStarterTemplate(this.value)" aria-label="Load starter C template">
+                <option value="">Load Starter Template...</option>
+                <option value="hello">Clean Execution Template</option>
+                <option value="file_missing">File Error (ENOENT) Template</option>
+                <option value="bad_fd">Invalid File Descriptor (EBADF) Template</option>
+                <option value="segfault">Segmentation Fault (SIGSEGV) Template</option>
+                <option value="cpu_mem_loop">Process Monitoring Loop Template</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="editor-layout">
+            <div class="panel-card editor-card">
+              <div class="editor-toolbar">
+                <div class="editor-name-field">
+                  <label for="programNameInput" class="field-label">Program Name</label>
+                  <div class="input-with-suffix">
+                    <span class="input-prefix">tests/</span>
+                    <input
+                      type="text"
+                      id="programNameInput"
+                      class="form-input"
+                      placeholder="my_custom_test"
+                      maxlength="64"
+                      autocomplete="off"
+                    />
+                    <span class="input-suffix">.c</span>
+                  </div>
+                </div>
+
+                <div class="editor-actions-bar">
+                  <button class="btn btn-secondary" id="btnSaveOnly" onclick="handleSaveProgram()">
+                    <span>SAVE</span>
+                  </button>
+                  <button class="btn btn-primary" id="btnSaveCompile" onclick="handleSaveAndCompile()">
+                    <span>SAVE &amp; COMPILE</span>
+                  </button>
+                  <button class="btn btn-emerald" id="btnEditorRun" onclick="handleEditorAction('run')">
+                    <span>RUN</span>
+                  </button>
+                  <button class="btn btn-blue" id="btnEditorDebug" onclick="handleEditorAction('debug')">
+                    <span>DEBUG</span>
+                  </button>
+                  <button class="btn btn-violet" id="btnEditorAutoDebug" onclick="handleEditorAction('autodebug')">
+                    <span>AUTODEBUG</span>
+                  </button>
+                  <button class="btn btn-ghost" onclick="handleResetEditor()">
+                    <span>CLEAR / RESET</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Code Editor Container (Monaco Editor or Synchronized Line-Numbered Dark C Editor) -->
+              <div class="code-editor-wrapper">
+                <div id="monacoContainer" class="monaco-host hidden"></div>
+                <div id="fallbackEditorWrap" class="fallback-editor-wrap">
+                  <div class="line-numbers-gutter" id="editorLineNumbers" aria-hidden="true">1</div>
+                  <textarea
+                    id="cSourceTextarea"
+                    class="c-source-textarea"
+                    spellcheck="false"
+                    autocapitalize="off"
+                    autocomplete="off"
+                    aria-label="C Source Code Editor"
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="editor-statusbar">
+                <span id="editorStatusLeft">C11 • UTF-8 • <code>tests/</code> sandbox</span>
+                <span id="editorStatusRight">Line 1, Col 1</span>
+              </div>
+            </div>
+
+            <!-- Real GCC Compilation Diagnostics Panel (Section 12) -->
+            <div class="panel-card compile-panel" id="compileResultCard">
+              <div class="panel-header">
+                <h2 class="panel-title">GCC Compiler Output</h2>
+                <span class="badge badge-neutral" id="compileStatusBadge">NOT COMPILED YET</span>
+              </div>
+              <div id="compileResultBody" class="compile-body">
+                <p class="muted-note">
+                  Click <strong>SAVE &amp; COMPILE</strong> to invoke <code>gcc -Wall -Wextra -std=c11 -g</code> and inspect real compiler diagnostics.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =======================================================
+             VIEW 4: DEBUGGER PAGE (Section 13 & 14)
+             ======================================================= -->
+        <section id="view-debugger" class="view-pane">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Source-Level C Debugger</h1>
+              <p class="view-subtitle">Interactive source-level debugging powered by real GDB (MI2), line stepping, breakpoints, variable inspection, and Linux system-call correlation.</p>
+            </div>
+            <div class="view-header-actions">
+              <span class="badge badge-neutral" id="dbgHeaderStatusBadge">IDLE</span>
+            </div>
+          </div>
+
+          <!-- Interactive Debugger Controls Toolbar -->
+          <div class="debugger-toolbar panel-card">
+            <div class="toolbar-left">
+              <div class="toolbar-item">
+                <label for="debuggerProgramSelect" class="field-label-inline">Target:</label>
+                <select id="debuggerProgramSelect" class="form-select form-select-sm" onchange="onDebuggerProgramChanged(this.value)">
+                  <!-- Loaded dynamically -->
+                </select>
+              </div>
+
+              <button class="btn btn-sm btn-primary" id="btnDbgStart" onclick="startInteractiveDebugger()" title="Compile target with -g -O0 and break at main()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>START DEBUGGING</span>
+              </button>
+
+              <div class="toolbar-divider"></div>
+
+              <!-- Stepping Controls -->
+              <button class="btn btn-sm btn-secondary" id="btnDbgNext" onclick="stepDebugger('next')" disabled title="Execute current statement, stop at next source line (Next)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <span>NEXT</span>
+              </button>
+
+              <button class="btn btn-sm btn-secondary" id="btnDbgStepInto" onclick="stepDebugger('step_into')" disabled title="Step into called user function (Step Into)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <span>STEP INTO</span>
+              </button>
+
+              <button class="btn btn-sm btn-secondary" id="btnDbgStepOut" onclick="stepDebugger('step_out')" disabled title="Finish current function and return to caller (Step Out)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>STEP OUT</span>
+              </button>
+
+              <button class="btn btn-sm btn-secondary" id="btnDbgContinue" onclick="stepDebugger('continue')" disabled title="Resume execution until breakpoint or termination (Continue)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 13 9 5 15 5 3"></polygon><line x1="17" y1="5" x2="17" y2="19"></line></svg>
+                <span>CONTINUE</span>
+              </button>
+
+              <div class="toolbar-divider"></div>
+
+              <button class="btn btn-sm btn-danger" id="btnDbgStop" onclick="stopInteractiveDebugger()" disabled title="Safely terminate debugging session and inferior processes">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                <span>STOP DEBUGGING</span>
+              </button>
+            </div>
+
+            <div class="toolbar-right">
+              <button class="btn btn-sm btn-outline" id="btnDbgSaveReport" onclick="saveDebuggerReport()" disabled title="Save diagnostic report to reports/">
+                <span>Save Report</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactive Debugger Two-Column Main Stage -->
+          <div class="interactive-stage-grid">
+            <!-- Left Main Column: Real Source Code Viewer -->
+            <div class="source-viewer-col">
+              <div class="panel-card source-card">
+                <div class="panel-header source-header">
+                  <div class="source-file-info">
+                    <span class="file-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    </span>
+                    <strong class="mono" id="dbgCurrentFileLabel">tests/math_step.c</strong>
+                    <span class="source-badge" id="dbgCurrentFuncBadge">main()</span>
+                  </div>
+                  <div class="source-status-tags">
+                    <span class="gutter-help-text">Click line number to toggle breakpoint</span>
+                  </div>
+                </div>
+
+                <!-- The Interactive Code Viewer Container -->
+                <div class="source-code-container" id="dbgSourceContainer">
+                  <!-- Dynamically populated with lines, gutter, breakpoint dots, and active execution arrow -->
+                </div>
+
+                <div class="source-footer">
+                  <span id="dbgSourceStats">Ready • Select program or click Start Debugging</span>
+                  <span class="mono" id="dbgSourceCoords">Ln —, Col —</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Sidebar Column: Inspector (State, Variables, Arguments, Call Stack) -->
+            <div class="inspector-col">
+              <!-- 1. Session Status Panel -->
+              <div class="panel-card mb-16">
+                <div class="panel-header">
+                  <h2 class="panel-title">SESSION STATUS</h2>
+                  <span class="badge badge-neutral" id="dbgLiveStatePill">IDLE</span>
+                </div>
+                <div class="kv-list">
+                  <div class="kv-row">
+                    <span class="kv-key">State</span>
+                    <span class="kv-val mono" id="dbgStatState">NOT_STARTED</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-key">PID</span>
+                    <span class="kv-val mono" id="dbgStatPid">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-key">Function</span>
+                    <span class="kv-val mono" id="dbgStatFunc">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-key">File &amp; Line</span>
+                    <span class="kv-val mono" id="dbgStatLine">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-key">Stop Reason</span>
+                    <span class="kv-val" id="dbgStatReason">Ready to debug</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Local Variables Panel -->
+              <div class="panel-card mb-16">
+                <div class="panel-header">
+                  <h2 class="panel-title">LOCAL VARIABLES</h2>
+                  <span class="panel-hint" id="dbgVarsCount">0 variables</span>
+                </div>
+                <div class="inspector-table-wrap">
+                  <table class="table-compact" id="dbgVariablesTable">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dbgVariablesBody">
+                      <tr><td colspan="3" class="text-muted text-center py-8">Start debugging to inspect variables</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 3. Function Arguments Panel -->
+              <div class="panel-card mb-16">
+                <div class="panel-header">
+                  <h2 class="panel-title">FUNCTION ARGUMENTS</h2>
+                </div>
+                <div class="inspector-table-wrap">
+                  <table class="table-compact" id="dbgArgumentsTable">
+                    <thead>
+                      <tr>
+                        <th>Argument</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dbgArgumentsBody">
+                      <tr><td colspan="2" class="text-muted text-center py-8">No arguments in current frame</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 4. Call Stack Panel -->
+              <div class="panel-card">
+                <div class="panel-header">
+                  <h2 class="panel-title">CALL STACK</h2>
+                  <span class="panel-hint">GDB Backtrace</span>
+                </div>
+                <div class="call-stack-list" id="dbgCallStackList">
+                  <div class="empty-stack-placeholder">Stack empty. Execution not started.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Tabs: Output, Errors & Signals, System Calls, Timeline -->
+          <div class="debugger-bottom-tabs panel-card mt-16">
+            <div class="tabs-bar">
+              <button class="tab-btn active" id="tabDbgOutput" onclick="switchDbgBottomTab('output')">
+                PROGRAM OUTPUT
+              </button>
+              <button class="tab-btn" id="tabDbgSignals" onclick="switchDbgBottomTab('signals')">
+                ERRORS &amp; SIGNALS <span class="tab-badge hidden" id="dbgSignalBadge">!</span>
+              </button>
+              <button class="tab-btn" id="tabDbgSyscalls" onclick="switchDbgBottomTab('syscalls')">
+                SYSTEM CALL EVIDENCE
+              </button>
+              <button class="tab-btn" id="tabDbgTimeline" onclick="switchDbgBottomTab('timeline')">
+                DEBUGGER TIMELINE
+              </button>
+            </div>
+
+            <!-- Output Tab Pane -->
+            <div class="dbg-tab-pane" id="dbgPaneOutput">
+              <div class="output-split">
+                <div class="output-half">
+                  <div class="subpane-label">Program STDOUT</div>
+                  <pre class="terminal-box-sm" id="dbgStdoutBox">[Program stdout will appear here]</pre>
+                </div>
+                <div class="output-half">
+                  <div class="subpane-label">Program STDERR</div>
+                  <pre class="terminal-box-sm text-amber" id="dbgStderrBox">[Program stderr will appear here]</pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Errors & Signals Tab Pane -->
+            <div class="dbg-tab-pane hidden" id="dbgPaneSignals">
+              <div id="dbgCrashCardContainer">
+                <div class="clean-note">
+                  <span class="status-dot dot-emerald"></span>
+                  <span>No signals or crashes detected. Program running cleanly.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- System Call Evidence Tab Pane -->
+            <div class="dbg-tab-pane hidden" id="dbgPaneSyscalls">
+              <div class="syscall-evidence-grid">
+                <div class="syscall-summary-strip" id="dbgSyscallSummaryStrip">
+                  <!-- Total syscalls, failed syscalls, etc. -->
+                </div>
+                <div class="table-scroll-wrap mt-12">
+                  <table class="table-compact" id="dbgSyscallTable">
+                    <thead>
+                      <tr>
+                        <th>Syscall</th>
+                        <th>Arguments / Details</th>
+                        <th>Return / Errno</th>
+                        <th>Source Correlation</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dbgSyscallBody">
+                      <tr><td colspan="4" class="text-muted text-center py-8">Select program to view system-call correlation.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline Tab Pane -->
+            <div class="dbg-tab-pane hidden" id="dbgPaneTimeline">
+              <div class="timeline-container" id="dbgTimelineContainer">
+                <div class="text-muted py-8 text-center">No debugger events recorded yet.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =======================================================
+             VIEW 5: AUTODEBUGGER PAGE (Section 17 & 18)
+             ======================================================= -->
+        <section id="view-autodebugger" class="view-pane">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">AutoDebugger</h1>
+              <p class="view-subtitle">Automated 6-stage Linux failure investigation combining <code>strace</code>, <code>errno</code>, <code>/proc</code>, and batch <code>GDB</code> crash analysis.</p>
+            </div>
+          </div>
+
+          <div class="debugger-grid">
+            <div class="debugger-controls-col">
+              <div class="panel-card">
+                <div class="panel-header">
+                  <h2 class="panel-title">RUN AUTODEBUGGER</h2>
+                </div>
+
+                <div class="form-group">
+                  <label for="autoProgramSelect" class="field-label">Select Program</label>
+                  <select id="autoProgramSelect" class="form-select"></select>
+                </div>
+
+                <div class="options-checklist">
+                  <label class="check-row">
+                    <input type="checkbox" id="optAutoGdb" checked />
+                    <span>Run GDB crash analysis when appropriate</span>
+                  </label>
+                </div>
+
+                <div class="debugger-btn-row">
+                  <button class="btn btn-primary btn-block" id="btnStartAutoDebug" onclick="runAutoDebuggerSession()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                    </svg>
+                    <span>RUN AUTODEBUGGER</span>
+                  </button>
+                  <button class="btn btn-danger hidden" id="btnStopAutoDebug" onclick="stopActiveSession()">
+                    <span>STOP SESSION</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Genuine 6-Stage Investigation Pipeline -->
+              <div class="panel-card">
+                <div class="panel-header">
+                  <h2 class="panel-title">INVESTIGATION STAGES</h2>
+                  <span class="badge badge-neutral" id="autoStageOverallBadge">READY</span>
+                </div>
+                <div class="stages-list" id="autoStagesList">
+                  <div class="stage-item" data-stage="1">
+                    <span class="stage-indicator">1</span>
+                    <div class="stage-body">
+                      <div class="stage-name">Executing program</div>
+                      <div class="stage-detail">Awaiting session start</div>
+                    </div>
+                  </div>
+                  <div class="stage-item" data-stage="2">
+                    <span class="stage-indicator">2</span>
+                    <div class="stage-body">
+                      <div class="stage-name">Collecting termination status</div>
+                      <div class="stage-detail">waitpid() exit code &amp; signal check</div>
+                    </div>
+                  </div>
+                  <div class="stage-item" data-stage="3">
+                    <span class="stage-indicator">3</span>
+                    <div class="stage-body">
+                      <div class="stage-name">Analyzing trace</div>
+                      <div class="stage-detail">strace system-call &amp; errno inspection</div>
+                    </div>
+                  </div>
+                  <div class="stage-item" data-stage="4">
+                    <span class="stage-indicator">4</span>
+                    <div class="stage-body">
+                      <div class="stage-name">Collecting process information</div>
+                      <div class="stage-detail">Linux /proc memory &amp; FD telemetry</div>
+                    </div>
+                  </div>
+                  <div class="stage-item" data-stage="5">
+                    <span class="stage-indicator">5</span>
+                    <div class="stage-body">
+                      <div class="stage-name">Running GDB</div>
+                      <div class="stage-detail">Triggered automatically on fatal signals</div>
+                    </div>
+                  </div>
+                  <div class="stage-item" data-stage="6">
+                    <span class="stage-indicator">6</span>
+                    <div class="stage-body">
+                      <div class="stage-name">Generating diagnosis</div>
+                      <div class="stage-detail">Evidence correlation &amp; report persistence</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: AutoDebugger Live Output & Crash/Diagnosis Summary -->
+            <div class="debugger-live-col">
+              <div id="autoDiagnosisHeroWrap">
+                <!-- Populated dynamically with Crash / Error / Clean Execution card or Empty State (Image 3/4/5) -->
+              </div>
+
+              <div class="panel-card">
+                <div class="panel-header">
+                  <h2 class="panel-title">AUTODEBUGGER CONSOLE STREAM</h2>
+                  <button class="btn btn-sm btn-secondary hidden" id="btnAutoOpenFullTabs" onclick="switchView('results')">
+                    Open 6-Tab Detailed Evidence →
+                  </button>
+                </div>
+                <pre class="terminal-box" id="autoLiveTerminal">$ Ready. Select a target program and click RUN AUTODEBUGGER.</pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =======================================================
+             VIEW 6: DETAILED DEBUGGER / AUTODEBUGGER RESULTS (Sections 15, 16, 18, 19, 20)
+             ======================================================= -->
+        <section id="view-results" class="view-pane">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" id="resultsPageHeading">Diagnostic Results</h1>
+              <p class="view-subtitle" id="resultsPageSubheading">Detailed kernel, system-call, process, and source-level evidence.</p>
+            </div>
+            <div class="view-header-actions" id="resultsHeaderActions">
+              <!-- Export JSON / Export TXT / Re-run buttons injected by app.js -->
+            </div>
+          </div>
+
+          <div id="resultsEmptyState" class="empty-state-card">
+            <div class="empty-state-icon">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+                <polyline points="7 8 10 10 7 12"></polyline>
+                <line x1="12" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </div>
+            <h2 class="empty-title">NO ANALYSIS YET</h2>
+            <p class="empty-desc">Select an existing test program or create your own C program to begin live system debugging.</p>
+            <div class="empty-actions">
+              <button class="btn btn-primary" onclick="switchView('programs')">SELECT PROGRAM</button>
+              <button class="btn btn-secondary" onclick="switchView('create')">CREATE PROGRAM</button>
+            </div>
+          </div>
+
+          <div id="resultsContentWrap" class="hidden">
+            <!-- Top Status Banner with subtle supporting illustration (Image 4 for Clean, Image 5 for Crash/Error) -->
+            <div id="resultsHeroBanner" class="results-hero-banner"></div>
+
+            <!-- 6 Result Tabs required by Section 15 -->
+            <div class="tabs-bar">
+              <button class="tab-btn active" data-rtab="summary" onclick="switchResultTab('summary')">SUMMARY</button>
+              <button class="tab-btn" data-rtab="syscalls" onclick="switchResultTab('syscalls')">SYSTEM CALLS</button>
+              <button class="tab-btn" data-rtab="procinfo" onclick="switchResultTab('procinfo')">PROCESS INFO</button>
+              <button class="tab-btn" data-rtab="output" onclick="switchResultTab('output')">PROGRAM OUTPUT</button>
+              <button class="tab-btn" data-rtab="source" onclick="switchResultTab('source')">SOURCE</button>
+              <button class="tab-btn" data-rtab="rawlogs" onclick="switchResultTab('rawlogs')">RAW LOGS</button>
+            </div>
+
+            <div id="rtab-summary" class="rtab-pane active"></div>
+            <div id="rtab-syscalls" class="rtab-pane hidden"></div>
+            <div id="rtab-procinfo" class="rtab-pane hidden"></div>
+            <div id="rtab-output" class="rtab-pane hidden"></div>
+            <div id="rtab-source" class="rtab-pane hidden"></div>
+            <div id="rtab-rawlogs" class="rtab-pane hidden"></div>
+          </div>
+        </section>
+
+        <!-- =======================================================
+             VIEW 8: REPORTS PAGE (Section 21)
+             ======================================================= -->
+        <section id="view-reports" class="view-pane">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Diagnostic Reports</h1>
+              <p class="view-subtitle">Historical archive of completed Debugger, AutoDebugger, and Direct Run sessions stored in <code>reports/</code>.</p>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="reports-filter-bar">
+              <input
+                type="search"
+                id="reportsSearchInput"
+                class="form-input"
+                placeholder="Search by program name, errno (ENOENT, EBADF), signal (SIGSEGV), or report ID..."
+                oninput="loadReportsList()"
+              />
+              <select id="reportsTypeFilter" class="form-select form-select-sm" onchange="loadReportsList()">
+                <option value="all">All Analysis Types</option>
+                <option value="Debugger">Debugger</option>
+                <option value="AutoDebugger">AutoDebugger</option>
+                <option value="Direct Run">Direct Run</option>
+              </select>
+              <select id="reportsResultFilter" class="form-select form-select-sm" onchange="loadReportsList()">
+                <option value="ALL">All Results</option>
+                <option value="SUCCESS">SUCCESS (Clean)</option>
+                <option value="ENOENT">ENOENT</option>
+                <option value="EBADF">EBADF</option>
+                <option value="EACCES">EACCES</option>
+                <option value="SIGSEGV">SIGSEGV</option>
+                <option value="SIGTERM">SIGTERM</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="loadReportsList()">Filter</button>
+            </div>
+
+            <div id="reportsListContainer">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal for Viewing Code or Confirming Deletion -->
+  <div id="appModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" id="appModalCard">
+      <div class="modal-header">
+        <h3 class="modal-title" id="appModalTitle">Modal</h3>
+        <button class="modal-close-btn" onclick="closeModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" id="appModalBody"></div>
+      <div class="modal-footer" id="appModalFooter"></div>
+    </div>
+  </div>
+
+  <!-- Optional Monaco Loader (gracefully enhances editor when CDN is reachable) -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

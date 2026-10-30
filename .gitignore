@@ -1,0 +1,46 @@
+# Compiled Object Files & Binaries
+*.o
+src/*.o
+autodebug_src/*.o
+debugger
+autodebug
+ldst
+tests/normal_test
+tests/file_error
+tests/invalid_fd
+tests/permission_error
+tests/system_call_error
+tests/abnormal_exit
+tests/segmentation_fault
+
+# Custom User Binaries (keep official .c sources)
+tests/*
+!tests/*.c
+
+# Runtime Logs, Traces & Generated Reports
+logs/*
+!logs/.gitkeep
+traces/*
+!traces/.gitkeep
+results/*
+!results/.gitkeep
+reports/*
+!reports/.gitkeep
+*.log
+
+# Python Virtual Environment & Bytecode
+.venv/
+venv/
+__pycache__/
+web/__pycache__/
+web/services/__pycache__/
+*.pyc
+
+# Archives
+*.zip
+*.tar.gz
+
+# OS / Editor Junk
+*Zone.Identifier*
+.DS_Store
+Thumbs.db
