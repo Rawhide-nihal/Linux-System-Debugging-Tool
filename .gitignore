@@ -1,7 +1,9 @@
 # Compiled Object Files & Binaries
 *.o
+*.so
 src/*.o
 autodebug_src/*.o
+native/*.so
 debugger
 autodebug
 ldst
@@ -12,12 +14,19 @@ tests/permission_error
 tests/system_call_error
 tests/abnormal_exit
 tests/segmentation_fault
+tests/fixtures/**/app_debug*
+tests/fixtures/**/boundary_test*
+tests/fixtures/**/*.o
+app_debug
 
 # Custom User Binaries (keep official .c sources)
 tests/*
 !tests/*.c
+!tests/unit/
+!tests/integration/
+!tests/fixtures/
 
-# Runtime Logs, Traces & Generated Reports
+# Runtime Logs, Traces & Storage Data
 logs/*
 !logs/.gitkeep
 traces/*
@@ -27,14 +36,24 @@ results/*
 reports/*
 !reports/.gitkeep
 *.log
+storage_data/
+workspaces/
 
 # Python Virtual Environment & Bytecode
 .venv/
 venv/
 __pycache__/
+backend/app/__pycache__/
 web/__pycache__/
 web/services/__pycache__/
 *.pyc
+.pytest_cache/
+
+# Node.js & Frontend Builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.tmp/
 
 # Archives
 *.zip

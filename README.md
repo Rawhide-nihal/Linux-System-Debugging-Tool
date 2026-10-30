@@ -1,291 +1,172 @@
-# LDST — Linux System Debugging Tool
+# Linux System Debugging Tool 3.0
 
-**Operating Systems & Systems Programming Project (OSSP — 25CS2104E)**
-
-LDST (**Linux System Debugging Tool**) is a complete Linux user-space debugging environment written in C with a dual interface:
-1. **Interactive Terminal CLI (`./ldst`, `./debugger`, `./autodebug`)**
-2. **Local Browser Web Application (`./run.sh` → `http://127.0.0.1:5000`)**
-
-Every technical result displayed in both the CLI and the Web GUI originates from genuine Linux execution: real `gcc` compilation, `fork()`/`execvp()`/`waitpid()` process control, `strace` system-call tracing, POSIX `errno` decoding, live `/proc` kernel telemetry, and batch `GDB` crash backtrace analysis.
+An interactive source-level C debugger, compiler diagnostics workbench, and forensic crash analysis environment for Linux systems.
 
 ---
 
-## Key Features
+## Overview & Architecture
 
-- **Dual-Interface Architecture**: Preserves the C terminal CLI (`./ldst`, `./debugger`, `./autodebug`) while adding a dark developer-grade local web application on `http://127.0.0.1:5000`.
-- **Custom C Program Creation & Editing**: Write, edit, save, and manage custom C11 programs inside `tests/` with strict path validation and line-numbered syntax editing.
-- **Real GCC Compilation & Diagnostics**: Compiles with `gcc -Wall -Wextra -std=c11 -g`, captures real `stdout`/`stderr`, counts warnings/errors, parses clickable `file:line:col` compiler diagnostics, and prevents stale binary execution when compilation fails.
-- **System-Call Tracing (`strace`)**: Captures kernel system calls (`openat`, `read`, `write`, `close`, `mmap`, `brk`, etc.), conservatively separates dynamic-loader startup probes (`/etc/ld.so.preload`) from target application failures, and groups failed calls by `errno`.
-- **Error & Signal Forensics (`errno` & `waitpid`)**: Decodes POSIX `errno` values (`ENOENT`, `EBADF`, `EACCES`, `EINVAL`, `EPERM`, etc.) and abnormal termination signals (`SIGSEGV`, `SIGTERM`, `SIGABRT`, `SIGFPE`, `SIGILL`).
-- **Live Linux `/proc` Process Monitoring**: Samples `/proc/<pid>/status`, `/proc/<pid>/stat`, and `/proc/<pid>/fd` during child execution to record PID, PPID, process state, CPU usage, `VmSize`, `VmRSS`, thread count, and open file descriptors.
-- **Automated Crash Investigation (`AutoDebugger` + `GDB`)**: Runs a 6-stage automated investigation and invokes batch `gdb` on fatal signals to extract stack frames (`#0 main () at ...`) and pinpoint crashing C source lines, clearly separating **Observed Facts** from **Diagnostic Interpretation**.
-- **Persistent Structured Reports**: Saves every debugging session to `reports/` in both `.json` and `.txt` formats with search, filtering, reopening, and one-click export.
+The **Linux System Debugging Tool** connects source-level editing directly to underlying Linux compilers (`gcc`, `clang`), native debugging engines (`gdb` via Machine Interface MI3/MI2), system-call instrumentation (`strace`), and the Linux `/proc` filesystem.
 
----
-
-## System Architecture
-
-The browser does **not** simulate or perform Linux debugging. Instead, the local Python/Flask backend communicates directly with the native LDST C debugging core (`./debugger` and `./autodebug`) and standard Linux system tools:
-
-```text
-                               LDST CORE
-                          (src/ & autodebug_src/)
-                              /             \
-                             /               \
-                            ▼                 ▼
-                      TERMINAL CLI         WEB GUI
-                         ./ldst            ./run.sh
-                                              │
-                                              ▼
-                                       127.0.0.1:5000
-                                              │
-                                       Browser Workspace
-                                              │
-                                              ▼
-                                        Flask Backend
-                                              │
-                        ┌─────────────────────┼─────────────────────┐
-                        ▼                     ▼                     ▼
-                       GCC               LDST C Core             Reports
-              (-Wall -Wextra -g)   (./debugger & ./autodebug)  (JSON & TXT)
-                                              │
-                                ┌─────────────┼─────────────┐
-                                ▼             ▼             ▼
-                              strace        /proc          GDB
-                                └─────────────┼─────────────┘
-                                              ▼
-                                        Linux Kernel
+```
+                      +---------------------------------------+
+                      |       React 19 + TypeScript GUI       |
+                      |  (Monaco Editor, xterm.js, Split Panes)|
+                      +---------------------------------------+
+                                          |
+                              WebSocket & REST API
+                                          |
+                      +---------------------------------------+
+                      |         FastAPI Python Engine         |
+                      |  (Session Controller, Workspace Mgt)  |
+                      +---------------------------------------+
+                             /            |             \
+            GDB MI3 Protocol        GCC / Clang         strace / /proc
+                           /              |              \
+                +-------------+    +-------------+   +-------------------+
+                | GDB Engine  |    | Diagnostics |   | Native Execution  |
+                |  (Inferior) |    | & -fanalyzer|   | (libldstnative.so)|
+                +-------------+    +-------------+   +-------------------+
 ```
 
 ---
 
-## Visual Preview & Interface Assets
+## Workbench Capabilities
 
-The web interface uses five custom dark developer-tool visual assets under `web/static/images/`:
-- **Landing Page Hero (`hero_artwork.jpg` & `tech_background.jpg`)**: Atmospheric Linux debugging hero section with pipeline overview and feature cards.
-- **Workspace Empty State (`empty_analysis.jpg`)**: Displayed when no analysis or report has been selected yet.
-- **Clean Execution State (`success_state.jpg`)**: Displayed only when a program completes cleanly (`exit_code == 0`, no signal, `relevant_failures == 0`).
-- **Crash / Failure State (`error_crash.jpg`)**: Displayed on genuine runtime crashes (`SIGSEGV`, `SIGTERM`) or system-call errors (`ENOENT`, `EBADF`, `EACCES`).
+1. **Interactive Source-Level Debugging**
+   - Direct execution control: Start, Step Over (`-exec-next`), Step Into (`-exec-step`), Step Out (`-exec-finish`), Continue (`-exec-continue`), Pause (`SIGINT`), Run to Cursor (`-exec-until`), and Clean Termination.
+   - GDB Breakpoint Controller: Line breakpoints, function breakpoints, conditional breakpoints, hit counters, and dynamic enable/disable.
+   - Live Inspection: Frame variables, function arguments, pointer dereferencing with NULL detection, watch expressions evaluated on stop, and bounded hex memory viewer (`-data-read-memory-bytes`).
+   - Call Stack Navigator: Full stack-frame levels, source mapping, and frame switching (`-stack-select-frame`).
 
----
+2. **Full C Project Inspection & Compilation**
+   - Single-file, multi-file automatic compilation, and native `Makefile` projects.
+   - Compiler Diagnostics Parser: Captures GCC/Clang syntax errors, type mismatches, missing semicolons, undeclared symbols, and linker failures with file, line, and column markers.
+   - Static Analysis (`-fanalyzer`): Identifies NULL pointer dereferences, double-free risks, use-after-free, memory leaks, and uninitialized variable usage before execution.
 
-## Requirements
+3. **AutoDebugger Automated Diagnostic Engine**
+   - 6-stage automated pipeline: Project validation, debug build with symbols (`-g -O0`), static analysis, GDB execution, signal/exit trapping, and system call tracing (`strace`).
+   - Forensic crash diagnosis for `SIGSEGV`, `SIGFPE`, `SIGABRT`, `SIGILL`, and non-zero exit terminations with confidence ratings and actionable remedies.
 
-- **OS**: Ubuntu / Linux (or WSL2 Ubuntu on Windows) with `/proc` mounted
-- **C Toolchain**: `gcc`, `make` (`build-essential`)
-- **Linux Debugging Utilities**: `strace`, `gdb`
-- **Web Backend**: `python3` (uses `Flask` when installed, with a built-in standard-library HTTP/WSGI fallback so `./run.sh` works out-of-the-box even before installing external pip packages)
+4. **Interactive Terminal (PTY / WebSocket)**
+   - Bidirectional terminal backed by real standard I/O streaming into `xterm.js`. Supports `scanf()`, `fgets()`, arguments, and interactive terminal loops.
 
----
+5. **Logic Bug Test Cases & Fix Verification**
+   - Define custom test suites with arguments, standard input, expected output, and expected exit codes.
+   - Output diff viewer comparing expected vs actual stdout.
+   - Regression verification engine comparing pre-fix and post-fix execution results.
 
-## Ubuntu Setup & Installation
-
-Run the first-time setup script to verify/install dependencies and compile the C core and official test programs:
-
-```bash
-chmod +x setup.sh run.sh selftest.sh
-./setup.sh
-```
-
-Or install packages and build manually on Ubuntu:
-
-```bash
-sudo apt update
-sudo apt install -y build-essential strace gdb python3 python3-flask python3-venv
-make clean
-make
-make tests
-```
+6. **SQLite Session Persistence & Reports**
+   - Preserves complete session snapshots, breakpoints, timelines, and diagnostic findings.
+   - Export structured reports in JSON and Markdown.
 
 ---
 
-## Starting the CLI
-
-You can use LDST purely from the terminal at any time without running the web server:
-
-```bash
-# Interactive console menu launcher
-./ldst
-
-# Run the C debugger directly on any target binary
-./debugger ./tests/file_error
-./debugger --no-trace ./tests/normal_test
-
-# Run the C AutoDebugger directly
-./autodebug ./tests/segmentation_fault
-```
-
----
-
-## Starting the Web GUI
-
-Start the local web application server with:
-
-```bash
-./run.sh
-```
-
-Expected startup output:
-
-```text
-================================================
- LDST — Linux System Debugging Tool
-================================================
-
-Checking environment...
-GCC ............. OK
-strace .......... OK
-GDB ............. OK
-LDST Core ....... OK
-Web Backend ..... OK
-
-LDST Web Interface is running:
-
-http://127.0.0.1:5000
-
-Press Ctrl+C to stop.
-================================================
-```
-
-Open **`http://127.0.0.1:5000`** in your browser.
-
----
-
-## Workflow Guide
-
-### 1. Creating & Compiling Custom C Programs
-1. Open **Create Program** in the left sidebar.
-2. Enter a valid program name (e.g., `my_test`, `file_bug`, `custom_program_1`). Path traversal (`../`) and shell metacharacters are strictly rejected.
-3. Write C11 code or pick a starter template from the dropdown.
-4. Click **SAVE & COMPILE** to invoke real `gcc -Wall -Wextra -std=c11 -g`.
-   - If compilation succeeds, the binary is written to `tests/<name>` and **RUN / DEBUG / AUTODEBUG** are enabled.
-   - If compilation fails, any prior binary is removed so a stale executable is never run, and clickable line diagnostics are displayed.
-
-### 2. Using the Interactive Source-Level C Debugger
-1. Open **Debugger** in the sidebar.
-2. Select any built-in or custom program (e.g., `math_step`, `function_call`, `segmentation_fault`, `sigfpe_test`, `nonzero_exit`).
-3. Click any line number in the source-code gutter to toggle **Breakpoints** before or during debugging.
-4. Click **START DEBUGGING**:
-   - The backend compiles the program with `gcc -Wall -Wextra -std=c11 -g -O0`.
-   - GDB (MI2) launches the binary, breaks at `main()`, and highlights the first executable source line.
-   - A correlation pass with `strace` captures kernel system calls and errno evidence.
-5. Use the Interactive Debugger Controls:
-   - **NEXT**: Step over the current source statement to the next line without entering functions.
-   - **STEP INTO**: Enter called user functions (e.g. `add(a, b)` in `function_call.c`).
-   - **STEP OUT**: Finish current function execution and return to caller.
-   - **CONTINUE**: Resume execution until a breakpoint, signal crash, or process termination.
-   - **STOP DEBUGGING**: Safely kill the GDB session and all inferior child processes.
-6. Inspect the Interactive Panels:
-   - **Source Code Viewer**: Shows line numbers, breakpoint markers, and current execution highlight (`> 11 | *ptr = 42;`).
-   - **Session Status**: Shows live State, PID, current Function, File & Line, and truthful Stop Reason.
-   - **Local Variables**: Live table showing names, types, and truthful values from GDB (`<not available>`, `<optimized out>`, `0x0 (NULL)`).
-   - **Function Arguments**: Inspect function parameters (`x`, `y`) at the current frame.
-   - **Call Stack**: Complete GDB backtrace frames (`#0 add()`, `#1 main()`); click any frame to inspect variables at that depth.
-   - **Program Output**: Separated target `stdout` and `stderr` streams, updated incrementally.
-   - **Errors & Signals**: On fatal signals (`SIGSEGV`, `SIGFPE`), displays the exact crashing source statement, line number, file, and backtrace. Deliberate non-zero exit codes (`return 42;`) are clearly distinguished from crashes.
-   - **System Call Evidence**: Real kernel system call counts, errno groupings, and source line correlations.
-   - **Debugger Timeline**: Chronological event history of every step and breakpoint hit.
-   - **Save Report**: Persists the debugging session into `reports/` for historical analysis.
-
-### 3. Using AutoDebugger & GDB Crash Analysis
-1. Open **AutoDebugger**, select a target program (such as `segmentation_fault`), and keep **Run GDB crash analysis when appropriate** checked.
-2. Click **RUN AUTODEBUGGER** to execute all 6 investigation stages:
-   1. *Executing program*
-   2. *Collecting termination status*
-   3. *Analyzing trace*
-   4. *Collecting process information*
-   5. *Running GDB* (automatically skipped when no crash occurred)
-   6. *Generating diagnosis*
-3. Inspect the crash report showing the fatal signal (`SIGSEGV`), parsed GDB backtrace (`#0 main () at segmentation_fault.c:9`), highlighted C source context, **Observed Facts**, and **Diagnostic Interpretation**.
-
-### 4. Understanding & Exporting Reports
-- Every completed session is saved under `reports/<session_id>.json` and `reports/<session_id>.txt`.
-- Visit **Reports** in the sidebar to search by program name, `errno`, or signal, reopen full 6-tab evidence, export as **TXT** or **JSON**, or delete old reports.
-
----
-
-## Security & Local Execution Warning
-
-> **IMPORTANT**: LDST intentionally compiles and executes user-written C programs on the host Linux machine for systems-programming education and debugging.
-> - The web server binds **strictly to `127.0.0.1` (localhost)** by default. Do **not** expose this service to untrusted public networks.
-> - All subprocess invocations use safe argument arrays (`execvp` in C, `subprocess.run`/`Popen` argument lists in Python) without `shell=True`.
-> - All custom source and binary files are confined to the project's `tests/` directory with strict filename validation.
-
----
-
-## Project Structure
+## Directory Structure
 
 ```text
 Linux-System-Debugging-Tool/
-├── src/
-│   ├── main.c              # CLI entry point for ./debugger
-│   ├── debugger.c / .h     # Core debugger controller & JSON session exporter
-│   ├── process_manager.c/.h# fork(), execvp(), waitpid(WNOHANG), timing & /proc polling
-│   ├── process_monitor.c/.h# /proc/<pid>/status, /proc/<pid>/stat, /proc/<pid>/fd reader
-│   ├── tracer.c / .h       # strace log analyzer & loader-noise filter
-│   ├── error_analyzer.c/.h # POSIX errno & signal lookup tables
-│   └── logger.c / .h       # Diagnostic text report writer
-├── autodebug_src/
-│   ├── auto_main.c         # CLI entry point for ./autodebug
-│   ├── auto_debug.c / .h   # 6-stage automated debugger + batch GDB analyzer
+│
+├── frontend/                     # React 19 + TypeScript + Vite Workbench
+│   ├── src/
+│   │   ├── components/           # Header, Sidebar, Split Panes
+│   │   ├── screens/              # 10 Workbench Screens
+│   │   ├── services/             # API Client & WebSocket Bridge
+│   │   └── types/                # TypeScript Interfaces
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── backend/                      # FastAPI Python Application
+│   ├── app/
+│   │   ├── api/                  # REST & WebSocket Endpoints
+│   │   ├── debugger/             # GDB MI3 Engine, Tokenized Dispatch, Terminal
+│   │   ├── compiler/             # Build System & Diagnostics Parser
+│   │   ├── analysis/             # Project Scanner & GCC -fanalyzer Integration
+│   │   ├── diagnostics/          # AutoDebugger & Forensic Crash Investigator
+│   │   ├── tracing/              # strace Runner & Errno Decoder
+│   │   ├── verification/         # Test Case Runner & Fix Verifier
+│   │   ├── workspace/            # Project Workspace CRUD & Safe Zip Import
+│   │   ├── storage/              # SQLite Session & Test Persistence
+│   │   └── security/             # Path Traversal & Sandbox Protection
+│   └── requirements.txt
+│
+├── native/                       # Native Linux C Layer
+│   ├── process_launcher.c        # Process Spawning & Resource Limits (RLIMIT)
+│   ├── process_status.c          # /proc Status & Metric Inspection
+│   ├── signal_handler.c          # Signal Decoding & Fault Cause Mapping
 │   └── Makefile
-├── ldst.c                  # Interactive terminal menu launcher (./ldst)
-├── tests/                  # Official built-in C test cases + custom user .c programs
-│   ├── normal_test.c       # Clean run, exit code 0
-│   ├── file_error.c        # Missing file, ENOENT, exit code 1
-│   ├── invalid_fd.c        # Bad file descriptor, EBADF, exit code 1
-│   ├── permission_error.c  # Permission denied, EACCES, exit code 1
-│   ├── system_call_error.c # System call failure handled, exit code 0
-│   ├── abnormal_exit.c     # Signal termination, raise(SIGTERM)
-│   ├── segmentation_fault.c# Null pointer dereference (*ptr = 42), SIGSEGV
-│   ├── math_step.c         # Local variables (a, b, c) stepping & sum calculation
-│   ├── function_call.c     # Step into add(), function arguments, call stack, step out
-│   ├── sigfpe_test.c       # Division by zero (42 / 0), SIGFPE hardware trap
-│   └── nonzero_exit.c      # Deliberate exit status 42 (distinguished from crash)
-├── web/
-│   ├── app.py              # Local web server (127.0.0.1:5000) & REST API routes
-│   ├── services/
-│   │   ├── security.py     # Path confinement, filename validation & tool checks
-│   │   ├── compiler.py     # Real GCC compilation & diagnostic line parser
-│   │   ├── interactive_debugger.py # Interactive GDB/MI source-level stepping engine
-│   │   ├── debugger.py     # Batch debugger runner & session lifecycle
-│   │   ├── autodebugger.py # AutoDebugger runner & GDB crash analyzer
-│   │   ├── trace_parser.py # strace parser, errno grouping & source attribution
-│   │   ├── process_monitor.py # Live /proc timeline sampler & host telemetry
-│   │   └── reports.py      # JSON & TXT report persistence and export
-│   ├── templates/
-│   │   ├── landing.html    # Landing page
-│   │   └── dashboard.html  # Application workspace shell
-│   └── static/
-│       ├── css/main.css    # Dark developer design system
-│       ├── js/app.js       # Workspace frontend logic
-│       └── images/         # 5 visual assets
-├── traces/                 # Captured strace logs
-├── reports/                # Persisted structured JSON & TXT diagnostic reports
-├── logs/                   # Runtime logs & GDB outputs
-├── results/                # CLI debugger & AutoDebugger text reports
-├── docs/                   # Architectural & course-outcome notes
-├── Makefile
-├── setup.sh
-├── run.sh
-├── selftest.sh
-└── README.md
+│
+├── tests/                        # Automated Pytest Suite
+│   ├── unit/                     # Unit Tests (MI Parser, Diagnostics, Security)
+│   ├── integration/              # Integration Tests (GDB, AutoDebug, Crashes)
+│   └── fixtures/                 # Real C Test Fixtures
+│       ├── compiler_errors/
+│       ├── logical_errors/
+│       ├── runtime_crashes/
+│       └── multi_file_projects/
+│
+├── scripts/                      # Setup & Launch Scripts
+│   ├── setup_linux.sh
+│   ├── start_dev.sh
+│   └── start_prod.sh
+│
+├── run.sh                        # Main Workbench Launcher
+└── setup.sh                      # Environment Bootstrap Script
 ```
 
 ---
 
-## Self-Test & Regression Verification
+## Installation & Setup
 
-Run the automated self-test suite to verify clean C compilation, all built-in error/signal detections (`ENOENT`, `EBADF`, `EACCES`, `SIGTERM`, `SIGSEGV`), GDB crash backtraces, custom C compilation, stale-binary protection, path-traversal prevention, report lifecycle, and HTTP API health:
+### Requirements
+
+- **Operating System:** Linux (Ubuntu 22.04 / 24.04 recommended) or Windows with WSL2 (Ubuntu).
+- **Compilers & Tools:** `gcc`, `gdb` (>= 12.0), `make`, `strace`.
+- **Runtimes:** Python 3.10+ and Node.js 18+.
+
+### Setup on Linux / WSL
 
 ```bash
-./selftest.sh
+# 1. Clone repository
+git clone https://github.com/Rawhide-nihal/Linux-System-Debugging-Tool.git
+cd Linux-System-Debugging-Tool
+
+# 2. Run automated setup script
+chmod +x setup.sh run.sh
+./setup.sh
+```
+
+### Running the Workbench
+
+```bash
+# Launch application server (FastAPI + React bundle on http://127.0.0.1:8000)
+./run.sh
+```
+
+### Development Mode (Hot Reload)
+
+```bash
+# In terminal 1 (Backend API):
+python3 -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# In terminal 2 (Vite Frontend):
+cd frontend && npm run dev
 ```
 
 ---
 
-## Troubleshooting & Known Limitations
+## Running Automated Tests
 
-- **`strace` or `gdb` missing**: Install on Ubuntu using `sudo apt install strace gdb`. The UI and CLI gracefully detect missing tools and display installation instructions.
-- **Very short-lived C programs**: Minimal C programs often finish execution in `< 5 ms`. LDST captures an immediate `/proc` snapshot right after `fork()` in C so peak `VmSize`/`VmRSS` are recorded, and truthfully notes when a process completed within a single sampling window rather than fabricating extra chart points.
-- **Port 5000 already in use**: Start on an alternate port with `LDST_PORT=5050 ./run.sh`.
+Run the complete test suite (unit and integration tests against real C binaries and GDB sessions):
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+---
+
+## Security Model
+
+- **Path Traversal Protection:** All workspace file operations resolve strictly within the project directory. Traversal attacks (`../../etc/passwd`, absolute root paths, or zip-slip archives) are blocked and rejected.
+- **Controlled Process Execution:** Executables run in dedicated subprocess groups with `RLIMIT_CPU`, `RLIMIT_AS` memory restrictions, and execution timeouts.
+- **Safe Network Binding:** Development servers bind to `127.0.0.1` (loopback) by default.
